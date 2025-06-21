@@ -1,0 +1,87 @@
+---
+- hosts: vyos_center
+  gather_facts: no
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: vyos.vyos.vyos
+    ansible_user: vyos
+    ansible_ssh_pass: vyos
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_pass: vyos
+    ansible_command_timeout: 120
+    ansible_ssh_timeout: 120
+
+  tasks:
+    - name: Configure interface
+      vyos.vyos.vyos_config:
+        lines:
+          - set interfaces ethernet eth1 address '172.17.0.1/16'
+
+    - name: Configure WireGuard interface
+      vyos.vyos.vyos_config:
+        lines:
+          - set interfaces wireguard wg0 address '10.1.2.1/29'
+          - set interfaces wireguard wg0 peer to-vyos02-wg0 address '172.17.0.2'
+          - set interfaces wireguard wg0 peer to-vyos02-wg0 allowed-ips '10.1.2.2/32'
+          - set interfaces wireguard wg0 peer to-vyos02-wg0 port '51820'
+          - set interfaces wireguard wg0 peer to-vyos02-wg0 public-key '9z3qWa98bORB4YHYksnO8iE0cvo3vPhNhYvO+cdLuTg='
+          - set interfaces wireguard wg0 peer to-vyos02-wg0 persistent-keepalive '15'
+
+          - set interfaces wireguard wg0 peer to-vyos03-wg0 address '172.17.0.3'
+          - set interfaces wireguard wg0 peer to-vyos03-wg0 allowed-ips '10.1.2.3/32'
+          - set interfaces wireguard wg0 peer to-vyos03-wg0 port '51820'
+          - set interfaces wireguard wg0 peer to-vyos03-wg0 public-key 'bUs1QzSfYDwWLybS7/17rSsce8QYFVyPEWu7+youID0='
+          - set interfaces wireguard wg0 peer to-vyos03-wg0 persistent-keepalive '15'
+
+          - set interfaces wireguard wg0 port '51820'
+          - set interfaces wireguard wg0 private-key '+BL4RX3p9Kxln94CjGfSRkjAqBvUDnS+E/XPLUwd1E4='
+
+    - name: Configure VXLAN interface
+      vyos.vyos.vyos_config:
+        lines:
+          - set interfaces vxlan vxlan0 mtu '1400'
+          - set interfaces vxlan vxlan0 port '4789'
+          - set interfaces vxlan vxlan0 remote '10.1.2.2'
+          - set interfaces vxlan vxlan0 source-address '10.1.2.1'
+          - set interfaces vxlan vxlan0 vni '100'
+
+          - set interfaces vxlan vxlan1 mtu '1400'
+          - set interfaces vxlan vxlan1 port '4789'
+          - set interfaces vxlan vxlan1 remote '10.1.2.3'
+          - set interfaces vxlan vxlan1 source-address '10.1.2.1'
+          - set interfaces vxlan vxlan1 vni '101'
+
+    - name: Configure bridge interface
+      vyos.vyos.vyos_config:
+        lines:
+          - set interfaces bridge br0 address '172.16.0.1/16'
+          - set interfaces bridge br0 member interface vxlan0
+          - set interfaces bridge br0 member interface vxlan1
+
+    - name: Configure NAT source rules
+      vyos.vyos.vyos_config:
+        lines:
+          - set nat source rule 2 outbound-interface name 'eth0'
+          - set nat source rule 2 source address '172.16.0.0/24'
+          - set nat source rule 2 translation address 'masquerade'
+          - set nat source rule 3 outbound-interface name 'br0'
+          - set nat source rule 3 source address '172.16.0.0/24'
+          - set nat source rule 3 translation address 'masquerade'
+
+    - name: Configure SNMP
+      vyos.vyos.vyos_config:
+        lines:
+          - set service snmp community public authorization 'ro'
+          - set service snmp listen-address 172.17.0.1 port '161'
+          - set service snmp trap-target 172.17.0.100 community 'public'
+
+    - name: Configure system settings
+      vyos.vyos.vyos_config:
+        lines:
+          - set system host-name 'vyos1'
+          - set system time-zone 'Asia/Tokyo'
+
+    - name: Commit configuration
+      vyos.vyos.vyos_config:
+        save: true

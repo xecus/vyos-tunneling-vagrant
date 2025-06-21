@@ -1,0 +1,33 @@
+---
+- hosts: exp_vyos1
+  gather_facts: no
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: vyos.vyos.vyos
+    ansible_user: vyos
+    ansible_ssh_pass: vyos
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_pass: vyos
+
+  tasks:
+    - name: Configure hostname
+      vyos.vyos.vyos_config:
+        lines:
+          - set system host-name vyos1
+
+    - name: Configure interfaces
+      vyos.vyos.vyos_config:
+        lines:
+          - set interfaces ethernet eth0 description 'WAN Interface'
+          - set interfaces ethernet eth0 address dhcp
+
+    - name: Configure SSH service
+      vyos.vyos.vyos_config:
+        lines:
+          - set service ssh port 22
+          - set service ssh listen-address 0.0.0.0
+
+    - name: Commit configuration
+      vyos.vyos.vyos_config:
+        save: true

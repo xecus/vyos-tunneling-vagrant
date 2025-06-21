@@ -1,0 +1,63 @@
+---
+- hosts: vyos
+  gather_facts: no
+  connection: ansible.netcommon.network_cli
+  vars:
+    ansible_network_os: vyos.vyos.vyos
+    ansible_user: vyos
+    ansible_ssh_pass: vyos
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_pass: vyos
+    ansible_command_timeout: 120
+    ansible_ssh_timeout: 120
+
+  tasks:
+    - name: Remove interface configuration
+      vyos.vyos.vyos_config:
+        lines:
+          - delete interfaces ethernet eth1
+          - delete interfaces ethernet eth2
+
+    - name: Remove WireGuard interface
+      vyos.vyos.vyos_config:
+        lines:
+          - delete interfaces wireguard wg0
+
+    - name: Remove bridge interface (first to release VXLAN)
+      vyos.vyos.vyos_config:
+        lines:
+          - delete interfaces bridge br0
+
+    - name: Remove VXLAN interface
+      vyos.vyos.vyos_config:
+        lines:
+          - delete interfaces vxlan vxlan0
+
+    - name: Remove NAT rules
+      vyos.vyos.vyos_config:
+        lines:
+          - delete nat
+
+    - name: Remove DNS
+      vyos.vyos.vyos_config:
+        lines:
+          - delete service dns
+
+    - name: Remove SNMP
+      vyos.vyos.vyos_config:
+        lines:
+          - delete service snmp
+
+    - name: Remove system settings
+      vyos.vyos.vyos_config:
+        lines:
+          - delete system domain-name
+          - delete system domain-search
+          - delete system host-name
+          - delete system static-host-mapping
+          - delete system time-zone
+
+    - name: Commit configuration
+      vyos.vyos.vyos_config:
+        save: true
