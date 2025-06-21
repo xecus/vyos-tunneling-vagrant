@@ -22,15 +22,15 @@
       vyos.vyos.vyos_config:
         lines:
           - set interfaces wireguard wg0 address '10.1.2.1/29'
-          - set interfaces wireguard wg0 peer to-vyos02-wg0 address '172.17.0.2'
+          #- set interfaces wireguard wg0 peer to-vyos02-wg0 address '172.17.0.2'
+          #- set interfaces wireguard wg0 peer to-vyos02-wg0 port '51820'
           - set interfaces wireguard wg0 peer to-vyos02-wg0 allowed-ips '10.1.2.2/32'
-          - set interfaces wireguard wg0 peer to-vyos02-wg0 port '51820'
           - set interfaces wireguard wg0 peer to-vyos02-wg0 public-key '9z3qWa98bORB4YHYksnO8iE0cvo3vPhNhYvO+cdLuTg='
           - set interfaces wireguard wg0 peer to-vyos02-wg0 persistent-keepalive '15'
 
-          - set interfaces wireguard wg0 peer to-vyos03-wg0 address '172.17.0.3'
+          #- set interfaces wireguard wg0 peer to-vyos03-wg0 address '172.17.0.3'
+          #- set interfaces wireguard wg0 peer to-vyos03-wg0 port '51820'
           - set interfaces wireguard wg0 peer to-vyos03-wg0 allowed-ips '10.1.2.3/32'
-          - set interfaces wireguard wg0 peer to-vyos03-wg0 port '51820'
           - set interfaces wireguard wg0 peer to-vyos03-wg0 public-key 'bUs1QzSfYDwWLybS7/17rSsce8QYFVyPEWu7+youID0='
           - set interfaces wireguard wg0 peer to-vyos03-wg0 persistent-keepalive '15'
 
