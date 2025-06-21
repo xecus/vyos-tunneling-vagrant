@@ -1,0 +1,29 @@
+network:
+  version: 2
+  ethernets:
+{% if ens5_mac is defined %}
+    ens5:
+      match:
+        macaddress: "{{ ens5_mac }}"
+      dhcp4: true
+      dhcp4-overrides:
+        use-routes: false
+      dhcp6: false
+      dhcp6-overrides:
+        use-routes: false
+{% endif %}
+{% if ens6_mac is defined %}
+    ens6:
+      match:
+        macaddress: "{{ ens6_mac }}"
+      dhcp4: false
+      dhcp6: false
+      addresses:
+        - {{ client_ip }}/{{ client_netmask }}
+      routes:
+        - to: 0.0.0.0/0
+          via: {{ client_gateway }}
+      nameservers:
+        addresses: [{{ client_dns }}]
+        search: [tgr.local]
+{% endif %}

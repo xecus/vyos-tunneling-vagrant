@@ -17,7 +17,7 @@
       vyos.vyos.vyos_config:
         lines:
           - set interfaces ethernet eth1 address '172.17.0.2/16'
-          #- set interfaces ethernet eth2 address '172.16.0.1/16'
+          - set interfaces ethernet eth2
 
     - name: Configure WireGuard interface
       vyos.vyos.vyos_config:

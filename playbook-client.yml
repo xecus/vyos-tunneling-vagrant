@@ -1,0 +1,130 @@
+---
+- hosts: ubuntu
+  become: yes
+  vars:
+    ansible_user: vagrant
+    ansible_ssh_pass: vagrant
+    # Network configuration variables - host-specific IP assignments
+    client_ip: >-
+      {%- if inventory_hostname == 'exp_ubuntu_a' -%}
+        {{ ansible_env.CLIENT_IP | default('172.16.0.20') }}
+      {%- elif inventory_hostname == 'exp_ubuntu_b' -%}
+        {{ ansible_env.CLIENT_IP | default('172.16.0.21') }}
+      {%- else -%}
+        {{ ansible_env.CLIENT_IP | default('172.16.0.22') }}
+      {%- endif -%}
+    client_netmask: "{{ ansible_env.CLIENT_NETMASK | default('16') }}"
+    client_gateway: "{{ ansible_env.CLIENT_GATEWAY | default('172.16.0.1') }}"
+    client_dns: "{{ ansible_env.CLIENT_DNS | default('172.16.0.1') }}"
+
+  tasks:
+    - name: Change default shell to bash
+      ansible.builtin.user:
+        name: vagrant
+        shell: /bin/bash
+
+    - name: Gather network interface facts
+      ansible.builtin.setup:
+        gather_subset:
+          - network
+
+    - name: Get MAC address for ens5
+      ansible.builtin.set_fact:
+        ens5_mac: "{{ ansible_ens5.macaddress }}"
+      when: ansible_ens5 is defined
+
+    - name: Display ens5 MAC address
+      ansible.builtin.debug:
+        msg: "ens5 MAC address: {{ ens5_mac }}"
+      when: ens5_mac is defined
+
+    - name: Get MAC address for ens6
+      ansible.builtin.set_fact:
+        ens6_mac: "{{ ansible_ens6.macaddress }}"
+      when: ansible_ens6 is defined
+
+    - name: Display ens6 MAC address
+      ansible.builtin.debug:
+        msg: "ens6 MAC address: {{ ens6_mac }}"
+      when: ens6_mac is defined
+
+    - name: Disable cloud-init network configuration
+      ansible.builtin.copy:
+        content: 'network: {config: disabled}'
+        dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+        mode: '0644'
+
+    - name: Configure netplan with auto-detected MAC addresses
+      ansible.builtin.template:
+        src: client-netplan.j2
+        dest: /etc/netplan/50-cloud-init.yaml
+        mode: '0600'
+        backup: yes
+
+    - name: Apply netplan configuration
+      ansible.builtin.shell:
+        cmd: netplan apply
+
+    - name: Check if Docker is already installed
+      ansible.builtin.command:
+        cmd: docker --version
+      register: docker_check
+      failed_when: false
+      changed_when: false
+
+    - name: Update package cache
+      ansible.builtin.apt:
+        update_cache: yes
+      when: docker_check.rc != 0
+
+    - name: Install prerequisites for Docker
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+      when: docker_check.rc != 0
+
+    - name: Create directory for apt keyrings
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      when: docker_check.rc != 0
+
+    - name: Add Docker GPG key
+      ansible.builtin.shell:
+        cmd: curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        creates: /etc/apt/keyrings/docker.gpg
+      when: docker_check.rc != 0
+
+    - name: Add Docker repository
+      ansible.builtin.shell:
+        cmd: |
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+        creates: /etc/apt/sources.list.d/docker.list
+      when: docker_check.rc != 0
+
+    - name: Update package cache after adding Docker repo
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+      when: docker_check.rc != 0
+
+    - name: Add vagrant user to docker group
+      ansible.builtin.user:
+        name: vagrant
+        groups: docker
+        append: yes
+      when: docker_check.rc != 0
+

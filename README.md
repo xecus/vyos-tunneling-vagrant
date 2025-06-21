@@ -22,6 +22,13 @@ Private key: kEbNrVMQukFL4cwRqu5fRLmAA1pWznRCmeXg+gDUXnk=
 Public key: o2//uPTyw7OG9WJLhy/RiIzqWQMMhEt36be11I9+8BE=
 ```
 
+- 事前準備
+
+```bash
+$ apt install ansible-core
+$ ansible-galaxy collection install vyos.vyos
+```
+
 - 仮想NW及びVMの立ち上げ
 
 ```bash
@@ -34,8 +41,16 @@ $ vagrant up
 $ ./get-vm-ips.sh
 ```
 
+- VyOS 3台のプロビジョニング
+
 ```bash
 $ ansible-playbook -i inventory.ini playbook-vyos.yml
 $ ansible-playbook -i inventory.ini playbook-vyos-a.yml
 $ ansible-playbook -i inventory.ini playbook-vyos-b.yml
+```
+
+- Ubuntu (VM)のプロビジョニング
+
+```bash
+$ ansible-playbook -i inventory.ini playbook-client.yml
 ```
